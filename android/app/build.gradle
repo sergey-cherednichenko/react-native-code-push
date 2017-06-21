@@ -32,7 +32,7 @@ android {
 }
 
 dependencies {
-    compile "com.facebook.react:react-native:0.19.+"
+    compile "com.facebook.react:react-native:+"
     compile "com.auth0:java-jwt:2.2.0"
     compile "com.hierynomus:sshj:0.17.2"
 }

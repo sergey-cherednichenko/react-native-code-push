@@ -1,5 +1,5 @@
 import { AcquisitionManager as Sdk } from "code-push/script/acquisition-sdk";
-import { DeviceEventEmitter } from "react-native";
+import { NativeEventEmitter } from "react-native";
 import RestartManager from "./RestartManager";
 
 // This function is used to augment remote and local
@@ -15,8 +15,9 @@ module.exports = (NativeCodePush) => {
 
         let downloadProgressSubscription;
         if (downloadProgressCallback) {
+          const codePushEventEmitter = new NativeEventEmitter(NativeCodePush);
           // Use event subscription to obtain download progress.
-          downloadProgressSubscription = DeviceEventEmitter.addListener(
+          downloadProgressSubscription = codePushEventEmitter.addListener(
             "CodePushDownloadProgress",
             downloadProgressCallback
           );
@@ -25,7 +26,10 @@ module.exports = (NativeCodePush) => {
         // Use the downloaded package info. Native code will save the package info
         // so that the client knows what the current package version is.
         try {
-          const downloadedPackage = await NativeCodePush.downloadUpdate(this, !!downloadProgressCallback);
+          const updatePackageCopy = Object.assign({}, this);
+          Object.keys(updatePackageCopy).forEach((key) => (typeof updatePackageCopy[key] === 'function') && delete updatePackageCopy[key]);
+
+          const downloadedPackage = await NativeCodePush.downloadUpdate(updatePackageCopy, !!downloadProgressCallback);
           reportStatusDownload && reportStatusDownload(this);
           return { ...downloadedPackage, ...local };
         } finally {
@@ -40,7 +44,8 @@ module.exports = (NativeCodePush) => {
   const local = {
     async install(installMode = NativeCodePush.codePushInstallModeOnNextRestart, minimumBackgroundDuration = 0, updateInstalledCallback) {
       const localPackage = this;
-      await NativeCodePush.installUpdate(this, installMode, minimumBackgroundDuration);
+      const localPackageCopy = Object.assign({}, localPackage); // In dev mode, React Native deep freezes any object queued over the bridge
+      await NativeCodePush.installUpdate(localPackageCopy, installMode, minimumBackgroundDuration);
       updateInstalledCallback && updateInstalledCallback();
       if (installMode == NativeCodePush.codePushInstallModeImmediate) {
         RestartManager.restartApp(false);
